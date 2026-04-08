@@ -1,0 +1,5 @@
+{
+  "name": "ESA Atlas",
+  "description": "Interactive map and data table of the European Space Agency (ESA) member states' national space agency headquarters.",
+  "requestFramePermissions": []
+}

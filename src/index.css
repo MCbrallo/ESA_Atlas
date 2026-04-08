@@ -1,0 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Leaflet Swiss Editorial Overrides */
+.leaflet-popup-content-wrapper {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border: 2px solid #111827 !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0px 0px rgba(17, 24, 39, 1) !important;
+}
+
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+
+.leaflet-popup {
+  margin-bottom: 20px !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: #111827 !important;
+  font-weight: bold;
+  padding: 8px 8px 0 0 !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: #ef4444 !important;
+}
+
+.leaflet-bar {
+  border: 2px solid #111827 !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0px 0px rgba(17, 24, 39, 1) !important;
+}
+
+.leaflet-bar a {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-bottom: 1px solid #111827 !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.leaflet-bar a:last-child {
+  border-bottom: none !important;
+}
+
+.custom-agency-marker {
+  background: transparent;
+  border: none;
+}
+
