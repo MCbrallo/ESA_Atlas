@@ -1,13 +1,259 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ESA Member States</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Leaflet CSS & JS via CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Lucide Icons via CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    body { font-family: 'Inter', sans-serif; }
+    .leaflet-bar a:last-child { border-bottom: none !important; }
+    .custom-agency-marker { background: transparent; border: none; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen p-4 md:p-8">
+  <div class="max-w-7xl mx-auto space-y-8">
+    <header class="border-b-4 border-gray-900 pb-6">
+      <h1 class="text-4xl md:text-6xl font-bold tracking-tight uppercase">ESA Member States</h1>
+      <p class="text-xl text-gray-600 mt-4 max-w-2xl">A directory of European Space Agency member states, their national space agencies, budgets, and headquarters.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="lg:col-span-2 border-4 border-gray-900 bg-white p-2 shadow-[8px_8px_0px_0px_rgba(17,24,39,1)]">
+        <div id="map" class="w-full h-[500px] bg-gray-100 z-0 relative"></div>
+      </div>
+      
+      <div class="lg:col-span-1 bg-white border-4 border-gray-900 p-6 shadow-[8px_8px_0px_0px_rgba(17,24,39,1)] flex flex-col justify-center">
+        <h2 class="text-2xl font-bold uppercase mb-4">Network Overview</h2>
+        <p class="text-gray-600 mb-6">The European Space Agency (ESA) is an intergovernmental organisation of 22 member states dedicated to the exploration of space.</p>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="border-2 border-gray-900 p-4 text-center">
+            <div class="text-3xl font-bold">22</div>
+            <div class="text-sm font-medium uppercase text-gray-500">Member States</div>
+          </div>
+          <div class="border-2 border-gray-900 p-4 text-center">
+            <div class="text-3xl font-bold">HQ</div>
+            <div class="text-sm font-medium uppercase text-gray-500">Paris, France</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(17,24,39,1)] overflow-hidden">
+      <div class="flex flex-col sm:flex-row justify-between items-center p-4 border-b-4 border-gray-900 bg-gray-100 gap-4">
+        <h3 class="font-bold uppercase text-xl">Agency Directory</h3>
+        <div class="flex items-center gap-3">
+          <label for="sort-select" class="font-bold uppercase text-sm">Sort By:</label>
+          <select id="sort-select" class="border-2 border-gray-900 p-2 font-bold uppercase text-sm bg-white cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-600">
+            <option value="alpha">Alphabetical</option>
+            <option value="year">Year of Creation</option>
+            <option value="budget">2026 Budget</option>
+          </select>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-[800px]">
+          <thead>
+            <tr class="bg-gray-900 text-white uppercase text-sm tracking-wider">
+              <th class="p-4 font-semibold">Agency</th>
+              <th class="p-4 font-semibold">Country</th>
+              <th class="p-4 font-semibold">Address</th>
+              <th class="p-4 font-semibold">Founded</th>
+              <th class="p-4 font-semibold">2026 Budget</th>
+              <th class="p-4 font-semibold text-right">Website</th>
+            </tr>
+          </thead>
+          <tbody id="agency-table-body" class="divide-y-2 divide-gray-200">
+            <!-- Rows injected via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Data with exact addresses, refined coordinates, founded year, and 2026 budget estimates (in Millions of Euros)
+    const agencies = [
+      { id: 'at', country: 'Austria', agencyName: 'Austrian Space Agency', acronym: 'ALR', city: 'Vienna', address: 'Sensengasse 1, 1090 Vienna', foundedYear: 1972, budget: 75, latitude: 48.2206, longitude: 16.3556, website: 'https://www.ffg.at/en/space', logoDomain: 'ffg.at' },
+      { id: 'be', country: 'Belgium', agencyName: 'Belgian Science Policy Office', acronym: 'BELSPO', city: 'Brussels', address: 'WTC III, Simon Bolivarlaan 30, 1000 Brussels', foundedYear: 1959, budget: 305, latitude: 50.8606, longitude: 4.3565, website: 'https://www.belspo.be/', logoDomain: 'belspo.be' },
+      { id: 'cz', country: 'Czech Republic', agencyName: 'Ministry of Transport', acronym: 'MDCR', city: 'Prague', address: 'nábř. L. Svobody 1222/12, 110 15 Prague', foundedYear: 2003, budget: 62, latitude: 50.0923, longitude: 14.4356, website: 'https://www.mdcr.cz/', logoDomain: 'mdcr.cz' },
+      { id: 'dk', country: 'Denmark', agencyName: 'Danish Agency for Higher Education and Science', acronym: 'UFM', city: 'Copenhagen', address: 'Børsgade 4, 1215 Copenhagen', foundedYear: 1968, budget: 45, latitude: 55.6754, longitude: 12.5844, website: 'https://ufm.dk/', logoDomain: 'ufm.dk' },
+      { id: 'ee', country: 'Estonia', agencyName: 'Estonian Space Office', acronym: 'ESO', city: 'Tallinn', address: 'Sepise 7, 11415 Tallinn', foundedYear: 2015, budget: 7, latitude: 59.4224, longitude: 24.8025, website: 'https://eas.ee/space/', logoDomain: 'eas.ee' },
+      { id: 'fi', country: 'Finland', agencyName: 'Business Finland', acronym: 'BF', city: 'Helsinki', address: 'Porkkalankatu 1, 00180 Helsinki', foundedYear: 1985, budget: 28, latitude: 60.1631, longitude: 24.9144, website: 'https://www.businessfinland.fi/', logoDomain: 'businessfinland.fi' },
+      { id: 'fr', country: 'France', agencyName: 'National Centre for Space Studies', acronym: 'CNES', city: 'Paris', address: '2 Place Maurice Quentin, 75039 Paris', foundedYear: 1961, budget: 3020, latitude: 48.8611, longitude: 2.3456, website: 'https://cnes.fr/', logoDomain: 'cnes.fr' },
+      { id: 'de', country: 'Germany', agencyName: 'German Aerospace Center', acronym: 'DLR', city: 'Cologne', address: 'Linder Höhe, 51147 Cologne', foundedYear: 1969, budget: 1540, latitude: 50.8533, longitude: 7.1233, website: 'https://www.dlr.de/', logoDomain: 'dlr.de' },
+      { id: 'gr', country: 'Greece', agencyName: 'Hellenic Space Center', acronym: 'HSC', city: 'Athens', address: '11 Kifisias Ave., 115 23 Athens', foundedYear: 2019, budget: 18, latitude: 38.0011, longitude: 23.7655, website: 'https://hsc.gov.gr/', logoDomain: 'hsc.gov.gr' },
+      { id: 'hu', country: 'Hungary', agencyName: 'Hungarian Space Office', acronym: 'HSO', city: 'Budapest', address: 'Fő utca 44-50, 1011 Budapest', foundedYear: 1992, budget: 12, latitude: 47.5055, longitude: 19.0381, website: 'https://space.kormany.hu/', logoDomain: 'kormany.hu' },
+      { id: 'ie', country: 'Ireland', agencyName: 'Enterprise Ireland', acronym: 'EI', city: 'Dublin', address: 'The Plaza, East Point Business Park, Dublin 3', foundedYear: 1998, budget: 26, latitude: 53.3592, longitude: -6.2234, website: 'https://www.enterprise-ireland.com/', logoDomain: 'enterprise-ireland.com' },
+      { id: 'it', country: 'Italy', agencyName: 'Italian Space Agency', acronym: 'ASI', city: 'Rome', address: 'Via del Politecnico snc, 00133 Rome', foundedYear: 1988, budget: 2100, latitude: 41.8616, longitude: 12.6236, website: 'https://www.asi.it/', logoDomain: 'asi.it', customLogoUrl: 'https://icon.horse/icon/asi.it' },
+      { id: 'lu', country: 'Luxembourg', agencyName: 'Luxembourg Space Agency', acronym: 'LSA', city: 'Luxembourg City', address: '19-21, boulevard Royal, L-2449 Luxembourg', foundedYear: 2018, budget: 35, latitude: 49.6116, longitude: 6.1319, website: 'https://space-agency.public.lu/', logoDomain: 'space-agency.public.lu' },
+      { id: 'nl', country: 'Netherlands', agencyName: 'Netherlands Space Office', acronym: 'NSO', city: 'The Hague', address: 'Prinses Beatrixlaan 2, 2595 AL The Hague', foundedYear: 2009, budget: 125, latitude: 52.0805, longitude: 4.3207, website: 'https://www.spaceoffice.nl/', logoDomain: 'spaceoffice.nl' },
+      { id: 'no', country: 'Norway', agencyName: 'Norwegian Space Agency', acronym: 'NOSA', city: 'Oslo', address: 'Drammensveien 165, 0277 Oslo', foundedYear: 1987, budget: 135, latitude: 59.9199, longitude: 10.6822, website: 'https://www.romsenter.no/', logoDomain: 'romsenter.no' },
+      { id: 'pl', country: 'Poland', agencyName: 'Polish Space Agency', acronym: 'POLSA', city: 'Warsaw', address: 'ul. Prosta 69, 00-838 Warsaw', foundedYear: 2014, budget: 65, latitude: 52.2307, longitude: 20.9822, website: 'https://polsa.gov.pl/', logoDomain: 'polsa.gov.pl' },
+      { id: 'pt', country: 'Portugal', agencyName: 'Portuguese Space Agency', acronym: 'PT Space', city: 'Lisbon', address: 'Estrada das Laranjeiras 205, 1649-018 Lisbon', foundedYear: 2019, budget: 38, latitude: 38.7454, longitude: -9.1673, website: 'https://ptspace.pt/', logoDomain: 'ptspace.pt' },
+      { id: 'ro', country: 'Romania', agencyName: 'Romanian Space Agency', acronym: 'ROSA', city: 'Bucharest', address: '21-25 Mendeleev str., 010362 Bucharest', foundedYear: 1991, budget: 52, latitude: 44.4435, longitude: 26.0967, website: 'http://www2.rosa.ro/', logoDomain: 'rosa.ro' },
+      { id: 'es', country: 'Spain', agencyName: 'Spanish Space Agency', acronym: 'AEE', city: 'Seville', address: 'Edificio CREA, C. José Galán Merino, s/n, 41015 Seville', foundedYear: 2023, budget: 705, latitude: 37.4150, longitude: -5.9800, website: 'https://www.aee.gob.es/', logoDomain: 'aee.gob.es' },
+      { id: 'se', country: 'Sweden', agencyName: 'Swedish National Space Agency', acronym: 'SNSA', city: 'Solna', address: 'Hemvärnsgatan 15, 171 54 Solna', foundedYear: 1972, budget: 110, latitude: 59.3541, longitude: 17.9788, website: 'https://www.rymdstyrelsen.se/', logoDomain: 'rymdstyrelsen.se', customLogoUrl: 'https://icon.horse/icon/rymdstyrelsen.se' },
+      { id: 'ch', country: 'Switzerland', agencyName: 'Swiss Space Office', acronym: 'SSO', city: 'Bern', address: 'Einsteinstrasse 2, 3003 Bern', foundedYear: 1998, budget: 205, latitude: 46.9427, longitude: 7.4497, website: 'https://www.sbfi.admin.ch/', logoDomain: 'sbfi.admin.ch' },
+      { id: 'gb', country: 'United Kingdom', agencyName: 'UK Space Agency', acronym: 'UKSA', city: 'Swindon', address: 'Polaris House, North Star Ave, Swindon SN2 1SZ', foundedYear: 2010, budget: 750, latitude: 51.5658, longitude: -1.7854, website: 'https://www.gov.uk/government/organisations/uk-space-agency', logoDomain: 'gov.uk' }
+    ];
+
+    // Initialize Map
+    const map = L.map('map').setView([50.0, 10.0], 4);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 20
+    }).addTo(map);
+
+    // Add Markers
+    agencies.forEach(agency => {
+      const logoUrl = agency.customLogoUrl || `https://www.google.com/s2/favicons?domain=${agency.logoDomain}&sz=128`;
+      const fallbackUrl = `https://ui-avatars.com/api/?name=${agency.acronym}&background=ffffff&color=111827&bold=true&font-size=0.4`;
+      
+      const iconHtml = `
+        <div class="w-10 h-10 rounded-full bg-white border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] flex items-center justify-center overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(239,68,68,1)] hover:border-red-600 group relative">
+          <img src="${logoUrl}" class="w-6 h-6 object-contain grayscale group-hover:grayscale-0 transition-all duration-300 relative z-10" onerror="this.onerror=null; this.src='${fallbackUrl}';" />
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        className: 'custom-agency-marker',
+        html: iconHtml,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -24],
+      });
+
+      const popupHtml = `
+        <div class="p-2 min-w-[260px] font-sans">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="w-14 h-14 bg-white flex items-center justify-center overflow-hidden shrink-0 border-2 border-gray-900 relative">
+              <img src="${logoUrl}" alt="${agency.acronym} logo" class="w-full h-full object-contain p-2 relative z-10 bg-white" onerror="this.onerror=null; this.src='${fallbackUrl}';" />
+            </div>
+            <div>
+              <h3 class="font-bold text-lg leading-tight text-gray-900">${agency.acronym}</h3>
+              <p class="text-sm text-gray-600 font-medium">${agency.country}</p>
+            </div>
+          </div>
+          <p class="text-sm font-medium text-gray-900 mb-3">${agency.agencyName}</p>
+          
+          <div class="space-y-1.5 mb-5 text-xs">
+            <div class="flex items-start gap-2 text-gray-600">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>
+              <span class="leading-tight">${agency.address}</span>
+            </div>
+            <div class="flex items-center gap-2 text-gray-600">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 shrink-0"></i>
+              <span>Founded in ${agency.foundedYear}</span>
+            </div>
+            <div class="flex items-center gap-2 text-gray-600">
+              <i data-lucide="coins" class="w-3.5 h-3.5 shrink-0"></i>
+              <span>2026 Budget: €${agency.budget}M</span>
+            </div>
+          </div>
+
+          <a href="${agency.website}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-full gap-2 bg-gray-900 text-white px-4 py-2 text-sm font-bold uppercase tracking-wider hover:bg-red-600 transition-colors">
+            Visit Website
+            <i data-lucide="external-link" class="w-4 h-4"></i>
+          </a>
+        </div>
+      `;
+
+      L.marker([agency.latitude, agency.longitude], { icon: customIcon })
+        .bindPopup(popupHtml)
+        .addTo(map);
+    });
+
+    // Table Logic
+    const tbody = document.getElementById('agency-table-body');
+    const sortSelect = document.getElementById('sort-select');
+
+    function renderTable(data) {
+      tbody.innerHTML = '';
+      data.forEach(agency => {
+        const logoUrl = agency.customLogoUrl || `https://www.google.com/s2/favicons?domain=${agency.logoDomain}&sz=128`;
+        const fallbackUrl = `https://ui-avatars.com/api/?name=${agency.acronym}&background=ffffff&color=111827&bold=true&font-size=0.4`;
+        
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50 transition-colors group';
+        tr.innerHTML = `
+          <td class="p-4">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 bg-white flex items-center justify-center overflow-hidden shrink-0 border-2 border-gray-900 relative">
+                <img src="${logoUrl}" alt="${agency.acronym} logo" class="w-full h-full object-contain p-2 grayscale group-hover:grayscale-0 transition-all duration-300 relative z-10 bg-white" onerror="this.onerror=null; this.src='${fallbackUrl}';" />
+              </div>
+              <div>
+                <div class="font-bold text-gray-900">${agency.agencyName}</div>
+                <div class="text-sm text-gray-500 font-medium">${agency.acronym}</div>
+              </div>
+            </div>
+          </td>
+          <td class="p-4">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-800 border border-gray-200">
+              ${agency.country}
+            </span>
+          </td>
+          <td class="p-4">
+            <div class="text-sm text-gray-900 font-medium max-w-[200px] truncate" title="${agency.address}">${agency.address}</div>
+          </td>
+          <td class="p-4 text-gray-900 font-bold">${agency.foundedYear}</td>
+          <td class="p-4">
+            <span class="text-green-800 font-bold bg-green-100 px-2.5 py-1 rounded border-2 border-green-800">
+              €${agency.budget}M
+            </span>
+          </td>
+          <td class="p-4 text-right">
+            <a href="${agency.website}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-sm font-bold text-gray-900 hover:text-red-600 transition-colors uppercase tracking-wider">
+              Link
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+            </a>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      
+      // Re-initialize icons for the new HTML
+      lucide.createIcons();
+    }
+
+    function sortData() {
+      const criteria = sortSelect.value;
+      let sorted = [...agencies];
+      
+      if (criteria === 'alpha') {
+        sorted.sort((a, b) => a.agencyName.localeCompare(b.agencyName));
+      } else if (criteria === 'year') {
+        sorted.sort((a, b) => a.foundedYear - b.foundedYear);
+      } else if (criteria === 'budget') {
+        sorted.sort((a, b) => b.budget - a.budget); // Descending (highest budget first)
+      }
+      
+      renderTable(sorted);
+    }
+
+    // Event Listeners
+    sortSelect.addEventListener('change', sortData);
+    
+    // Initial Render
+    sortData();
+    
+    // Initialize map popups icons
+    map.on('popupopen', function() {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
